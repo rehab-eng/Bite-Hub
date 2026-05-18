@@ -2,7 +2,7 @@
 cls
 echo.
 echo =================================================
-echo ==      BITE HUB SYSTEM INSTALLER & LAUNCHER     ==
+echo ==      BITE HUB SYSTEM INSTALLER ^& LAUNCHER     ==
 echo =================================================
 echo.
 
