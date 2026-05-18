@@ -1,0 +1,236 @@
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Bite Hub Control Center{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bh-surface: #0f172a;
+      --bh-panel: #111827;
+      --bh-card: #ffffff;
+      --bh-border: rgba(148, 163, 184, 0.18);
+      --bh-accent: #0f766e;
+      --bh-accent-soft: rgba(15, 118, 110, 0.12);
+      --bh-highlight: #f97316;
+      --bh-text: #0f172a;
+      --bh-muted: #64748b;
+    }
+    body {
+      font-family: "Cairo", sans-serif;
+      background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+      color: var(--bh-text);
+      min-height: 100vh;
+    }
+    .bh-shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    .bh-sidebar {
+      background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+      color: #fff;
+      padding: 28px 18px;
+      border-left: 1px solid rgba(255,255,255,0.06);
+    }
+    .bh-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.15rem;
+      margin-bottom: 28px;
+    }
+    .bh-brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #14b8a6, #f97316);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+    }
+    .bh-nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: rgba(255,255,255,0.82);
+      text-decoration: none;
+      padding: 12px 14px;
+      border-radius: 14px;
+      margin-bottom: 8px;
+      background: transparent;
+      transition: all .2s ease;
+    }
+    .bh-nav-link:hover,
+    .bh-nav-link.active {
+      color: #fff;
+      background: rgba(255,255,255,0.08);
+    }
+    .bh-main {
+      padding: 28px;
+      min-width: 0;
+    }
+    .bh-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .bh-page-title {
+      margin: 0;
+      font-size: 1.9rem;
+      font-weight: 800;
+    }
+    .bh-page-subtitle {
+      color: var(--bh-muted);
+      margin: 4px 0 0;
+    }
+    .bh-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--bh-border);
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+      min-width: 0;
+    }
+    .bh-kpi {
+      padding: 22px;
+    }
+    .bh-kpi .label {
+      color: var(--bh-muted);
+      font-size: 0.92rem;
+    }
+    .bh-kpi .value {
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin-top: 6px;
+    }
+    .bh-section-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+    .bh-pill {
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      background: var(--bh-accent-soft);
+      color: var(--bh-accent);
+      font-weight: 700;
+    }
+    .bh-toast-stack {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1080;
+      display: grid;
+      gap: 10px;
+      width: min(380px, calc(100vw - 32px));
+    }
+    .bh-toast {
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+      overflow: hidden;
+    }
+    @media (max-width: 991px) {
+      .bh-shell {
+        grid-template-columns: 1fr;
+      }
+      .bh-sidebar {
+        border-left: 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .bh-main {
+        padding: 20px;
+      }
+      .bh-topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="bh-shell">
+    <aside class="bh-sidebar">
+      <div class="bh-brand">
+        <div class="bh-brand-mark">BH</div>
+        <div>
+          <div>Bite Hub</div>
+          <small class="text-white-50">Control Center</small>
+        </div>
+      </div>
+      <nav>
+        <a href="{% url 'core:super_admin_dashboard' %}" class="bh-nav-link {% if request.resolver_match.url_name == 'super_admin_dashboard' %}active{% endif %}">
+          <span>لوحة السوبر أدمن</span>
+          <span>01</span>
+        </a>
+        <a href="{% url 'core:cafe_panel' %}" class="bh-nav-link {% if request.resolver_match.url_name == 'cafe_panel' %}active{% endif %}">
+          <span>لوحة المقهى الحية</span>
+          <span>02</span>
+        </a>
+        <a href="{% url 'core:route_after_login' %}" class="bh-nav-link">
+          <span>اللوحة القديمة</span>
+          <span>03</span>
+        </a>
+      </nav>
+      <div class="mt-4 pt-3 border-top border-secondary-subtle">
+        <div class="text-white-50 small">المستخدم الحالي</div>
+        <div class="fw-bold mt-2">{{ request.user.full_name|default:request.user.email }}</div>
+        <div class="small text-white-50">{{ request.user.email }}</div>
+      </div>
+    </aside>
+    <main class="bh-main">
+      <div class="bh-topbar">
+        <div>
+          <h1 class="bh-page-title">{% block page_title %}Bite Hub{% endblock %}</h1>
+          <p class="bh-page-subtitle">{% block page_subtitle %}Modern operations interface.{% endblock %}</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="bh-pill">Live Ops</span>
+          <a class="btn btn-dark rounded-pill px-4" href="{% url 'core:logout' %}">تسجيل الخروج</a>
+        </div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% if messages %}
+    <div class="bh-toast-stack">
+      {% for message in messages %}
+        <div
+          class="toast bh-toast text-bg-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}dark{% endif %}"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          data-bs-delay="4200"
+        >
+          <div class="d-flex">
+            <div class="toast-body fw-semibold">{{ message }}</div>
+            <button type="button" class="btn-close btn-close-white m-auto ms-2 me-2" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.querySelectorAll(".toast").forEach((toastNode) => {
+      bootstrap.Toast.getOrCreateInstance(toastNode).show();
+    });
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

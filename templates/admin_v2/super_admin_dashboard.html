@@ -1,0 +1,380 @@
+{% extends "admin_v2/base.html" %}
+{% load static %}
+
+{% block title %}Super Admin Dashboard | Bite Hub{% endblock %}
+{% block page_title %}لوحة السوبر أدمن{% endblock %}
+{% block page_subtitle %}مراقبة الأداء، إضافة المقاهي، ومتابعة الأعطال من نقطة واحدة.{% endblock %}
+
+{% block extra_head %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    .bh-table thead th {
+      color: #64748b;
+      font-size: .86rem;
+      font-weight: 800;
+      border-bottom-width: 1px;
+      white-space: nowrap;
+      background: #f8fafc;
+    }
+    .bh-table {
+      border-collapse: separate;
+      border-spacing: 0 10px;
+      min-width: 720px;
+    }
+    .bh-table tbody tr {
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .05);
+    }
+    .bh-table tbody td {
+      vertical-align: middle;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+      background: #fff;
+      border-top: 1px solid rgba(148, 163, 184, .12);
+      border-bottom: 1px solid rgba(148, 163, 184, .12);
+      overflow-wrap: anywhere;
+    }
+    .bh-table code {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .bh-table tbody td:first-child {
+      border-right: 1px solid rgba(148, 163, 184, .12);
+      border-radius: 0 16px 16px 0;
+    }
+    .bh-table tbody td:last-child {
+      border-left: 1px solid rgba(148, 163, 184, .12);
+      border-radius: 16px 0 0 16px;
+    }
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-left: 6px;
+      background: #94a3b8;
+    }
+    .status-dot.active {
+      background: #10b981;
+    }
+    .bh-empty-state {
+      padding: 32px 24px;
+      text-align: center;
+      border: 1px dashed rgba(148, 163, 184, .3);
+      border-radius: 22px;
+      background: rgba(248, 250, 252, .72);
+    }
+    .bh-empty-icon {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 14px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: rgba(15, 118, 110, .1);
+      color: #0f766e;
+      font-size: 1.8rem;
+    }
+    .bh-table-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .bh-chart-frame {
+      position: relative;
+      height: clamp(260px, 32vh, 360px);
+      min-height: 260px;
+    }
+    .bh-chart-frame canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="bh-card bh-kpi">
+        <div class="label">إجمالي المبيعات</div>
+        <div class="value">{{ kpis.total_sales|floatformat:2 }} د.ل</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="bh-card bh-kpi">
+        <div class="label">الطلبات الحية</div>
+        <div class="value">{{ kpis.live_orders }}</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="bh-card bh-kpi">
+        <div class="label">الطلاب النشطون</div>
+        <div class="value">{{ kpis.active_students }}</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="bh-card bh-kpi">
+        <div class="label">المقاهي الفعالة</div>
+        <div class="value">{{ kpis.active_cafes }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-12 col-xl-8">
+      <div class="bh-card p-4 h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div class="bh-section-title mb-0">الأداء خلال آخر 7 أيام</div>
+          <span class="bh-pill">Chart.js</span>
+        </div>
+        <div class="bh-chart-frame">
+          <canvas id="salesTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-xl-4">
+      <div class="bh-card p-4 h-100">
+        <div class="bh-table-actions mb-3">
+          <div>
+            <div class="bh-section-title mb-1">إضافة مقهى جديد</div>
+            <div class="text-muted small">إنشاء مقهى جديد من نفس الواجهة دون مغادرة اللوحة.</div>
+          </div>
+          <span class="bh-pill">Provisioning</span>
+        </div>
+        <div class="bh-empty-state">
+          <div class="bh-empty-icon">+</div>
+          <h3 class="h5 fw-bold">تهيئة مقهى جديد</h3>
+          <p class="text-muted mb-3">الاسم والكود مطلوبان، وربط الكلية اختياري في هذه المرحلة.</p>
+          <button type="button" class="btn btn-dark btn-lg rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createCafeModal">
+            فتح نافذة الإنشاء
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-12 col-xl-7">
+      <div class="bh-card p-4">
+        <div class="bh-table-actions mb-3">
+          <div class="bh-section-title mb-0">المقاهي الأعلى نشاطاً</div>
+          <span class="bh-pill">Realtime-ready</span>
+        </div>
+        {% if cafe_breakdown %}
+        <div class="table-responsive">
+          <table class="table table-hover bh-table align-middle">
+            <thead>
+              <tr>
+                <th>المقهى</th>
+                <th>الكلية</th>
+                <th>المبيعات</th>
+                <th>الطلبات الحية</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cafe in cafe_breakdown %}
+                <tr>
+                  <td class="fw-bold">{{ cafe.name }}</td>
+                  <td>{{ cafe.faculty.name|default:"-" }}</td>
+                  <td>{{ cafe.total_sales|default:0|floatformat:2 }} د.ل</td>
+                  <td>{{ cafe.live_orders|default:0 }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-muted">لا توجد بيانات بعد.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="bh-empty-state">
+            <div class="bh-empty-icon">📊</div>
+            <h3 class="h5 fw-bold">لا توجد بيانات أداء بعد</h3>
+            <p class="text-muted mb-0">بمجرد وصول الطلبات الأولى ستظهر المقاهي الأعلى نشاطاً هنا تلقائياً.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-12 col-xl-5">
+      <div class="bh-card p-4 h-100">
+        <div class="bh-table-actions mb-3">
+          <div class="bh-section-title mb-0">مراقبة الأخطاء</div>
+          <span class="bh-pill">Sentry / Local</span>
+        </div>
+        <div class="d-grid gap-3">
+          {% for error in error_snapshots %}
+            <div class="border rounded-4 p-3">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <strong>{{ error.source }}</strong>
+                <span class="badge text-bg-dark">{{ error.level }}</span>
+              </div>
+              <div class="text-muted small">{{ error.message }}</div>
+            </div>
+          {% empty %}
+            <div class="border rounded-4 p-4 text-center text-muted">
+              لم يتم العثور على أخطاء محلية حالياً. إذا كان Sentry مفعلاً فسيتم تجميع الأحداث هناك.
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-12">
+      <div class="bh-card p-4">
+        <div class="bh-table-actions mb-3">
+          <div class="bh-section-title mb-0">إدارة المقاهي</div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="bh-pill">Create / Toggle</span>
+            <button type="button" class="btn btn-outline-dark rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#createCafeModal">
+              مقهى جديد
+            </button>
+          </div>
+        </div>
+        {% if cafes %}
+        <div class="table-responsive">
+          <table class="table table-hover bh-table align-middle">
+            <thead>
+              <tr>
+                <th>المقهى</th>
+                <th>الكلية</th>
+                <th>الكود</th>
+                <th>الحالة</th>
+                <th>الطلبات</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cafe in cafes %}
+                <tr>
+                  <td class="fw-bold">{{ cafe.name }}</td>
+                  <td>{{ cafe.faculty.name|default:"-" }}</td>
+                  <td><code>{{ cafe.code }}</code></td>
+                  <td>
+                    {% if cafe.is_active %}
+                      <span class="badge text-bg-success"><span class="status-dot active"></span>نشط</span>
+                    {% else %}
+                      <span class="badge text-bg-secondary"><span class="status-dot"></span>موقوف</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ cafe.total_orders|default:0 }}</td>
+                  <td>
+                    <form
+                      method="post"
+                      action="{% url 'core:toggle_cafe_status_from_dashboard' cafe.id %}"
+                      class="d-inline js-toggle-cafe-form"
+                      data-cafe-name="{{ cafe.name }}"
+                      data-next-action="{% if cafe.is_active %}إيقاف{% else %}تفعيل{% endif %}"
+                    >
+                      {% csrf_token %}
+                      <button type="button" class="btn btn-sm {% if cafe.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %} rounded-pill js-toggle-cafe-button">
+                        {% if cafe.is_active %}إيقاف{% else %}تفعيل{% endif %}
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% empty %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="bh-empty-state">
+            <div class="bh-empty-icon">☕</div>
+            <h3 class="h5 fw-bold">لا توجد مقاهٍ مسجلة بعد</h3>
+            <p class="text-muted mb-3">ابدأ بإنشاء أول مقهى ليظهر هنا ولينعكس مباشرة في التطبيق.</p>
+            <button type="button" class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createCafeModal">
+              إنشاء أول مقهى
+            </button>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="createCafeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 rounded-5 shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h2 class="h4 fw-bold mb-1">إنشاء مقهى جديد</h2>
+            <div class="text-muted small">سيظهر المقهى فوراً في التطبيق ولوحة الإدارة بعد الحفظ.</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-3">
+          <form method="post" action="{% url 'core:create_cafe_from_dashboard' %}" class="row g-3">
+            {% csrf_token %}
+            <div class="col-12">
+              <label class="form-label">اسم المقهى</label>
+              <input type="text" name="name" class="form-control form-control-lg rounded-4" placeholder="مثال: Cafe of Engineering" value="{{ cafe_form_data.name }}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">الكلية</label>
+              <select name="faculty_id" class="form-select form-select-lg rounded-4">
+                <option value="">بدون كلية محددة</option>
+                {% for faculty in faculties %}
+                  <option value="{{ faculty.id }}" {% if cafe_form_data.faculty_id == faculty.id|stringformat:"s" %}selected{% endif %}>{{ faculty.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">اختياري. يمكن إنشاء المقهى حتى لو لم تُسجل أي كلية بعد.</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">كود المقهى</label>
+              <input type="text" name="code" class="form-control form-control-lg rounded-4" placeholder="engineering-cafe" value="{{ cafe_form_data.code }}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">مدير المقهى</label>
+              <select name="owner_id" class="form-select form-select-lg rounded-4">
+                <option value="">بدون مدير حاليا</option>
+                {% for manager in managers %}
+                  <option value="{{ manager.id }}" {% if cafe_form_data.owner_id == manager.id|stringformat:"s" %}selected{% endif %}>
+                    {{ manager.full_name|default:manager.email }} - {{ manager.email }}
+                  </option>
+                {% endfor %}
+              </select>
+              <div class="form-text">اختياري. عند اختيار مدير سيتم ربطه بالمقهى وتجهيز صلاحيات لوحة المقهى ومحفظته تلقائيا.</div>
+            </div>
+            <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+              <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+              <button type="submit" class="btn btn-dark rounded-pill px-4">إنشاء المقهى</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="confirmCafeToggleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 rounded-5 shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <div>
+            <h2 class="h4 fw-bold mb-1">تأكيد العملية</h2>
+            <div class="text-muted small" id="confirmCafeToggleText">هل تريد متابعة تغيير حالة المقهى؟</div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning rounded-4 mb-0">
+            سيؤثر هذا التغيير على ظهور المقهى في تطبيق الطلاب وقائمة المقاهي المتاحة.
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+          <button type="button" class="btn btn-dark rounded-pill px-4" id="confirmCafeToggleSubmit">تأكيد</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{ sales_series|json_script:"sales-series-data" }}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'admin_v2/super_admin_dashboard.js' %}"></script>
+{% endblock %}
