@@ -743,7 +743,7 @@ class DashboardRenderSmokeTests(TestCase):
         response = self.client.get(reverse("core:cafe_login_for_code", args=[self.cafe.code]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "بوابة المقهى")
+        self.assertContains(response, "دخول المقاهي")
         self.assertContains(response, self.cafe.name)
         self.assertNotContains(response, "confirmCafeToggleModal")
         self.assertNotIn("_auth_user_id", self.client.session)
@@ -837,22 +837,20 @@ class DashboardRenderSmokeTests(TestCase):
         self.assertEqual(len(payload["orders"]), 1)
         self.assertEqual(payload["orders"][0]["id"], order.id)
 
-    @override_settings(DEBUG=True)
-    def test_dev_passwordless_super_admin_login_opens_dashboard(self):
+    def test_super_admin_password_only_login_opens_dashboard(self):
         response = self.client.post(
             reverse("core:login"),
-            data={"dev_role": "super_admin"},
+            data={"password": "StrongPass123"},
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "confirmCafeToggleModal")
 
-    @override_settings(DEBUG=True)
-    def test_dev_passwordless_cafe_login_opens_panel(self):
+    def test_cafe_login_uses_cafe_selection_and_password(self):
         response = self.client.post(
             reverse("core:cafe_login"),
-            data={"dev_role": "cafe"},
+            data={"cafe_id": self.cafe.id, "password": "StrongPass123"},
             follow=True,
         )
 
@@ -867,3 +865,7 @@ class DashboardRenderSmokeTests(TestCase):
         self.assertEqual(cafe_response.status_code, 200)
         self.assertContains(admin_response, reverse("core:admin_login"))
         self.assertContains(cafe_response, reverse("core:cafe_login_for_code", args=[self.cafe.code]))
+        self.assertNotContains(admin_response, "دخول تجريبي")
+        self.assertNotContains(cafe_response, "دخول تجريبي")
+        self.assertNotContains(admin_response, 'name="username"')
+        self.assertContains(cafe_response, 'name="cafe_id"')

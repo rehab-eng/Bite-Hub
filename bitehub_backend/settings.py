@@ -68,6 +68,7 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-change-me-plea
 DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = csv_config("DJANGO_ALLOWED_HOSTS", default="*" if DEBUG else "")
 CSRF_TRUSTED_ORIGINS = csv_config("DJANGO_CSRF_TRUSTED_ORIGINS")
+BACKOFFICE_SUPER_ADMIN_EMAIL = config("BACKOFFICE_SUPER_ADMIN_EMAIL", default="")
 
 if not DEBUG:
     if SECRET_KEY == "django-insecure-change-me-please":

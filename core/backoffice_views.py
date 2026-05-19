@@ -37,102 +37,8 @@ from wallet.models import Transaction, Wallet
 logger = logging.getLogger(__name__)
 
 
-def _passwordless_backoffice_enabled() -> bool:
-    return bool(getattr(settings, "DEBUG", False))
-
-
-def _get_or_create_dev_super_admin() -> User:
-    user = User.objects.filter(is_superuser=True).order_by("id").first()
-    if user:
-        return user
-
-    user = User.objects.create_superuser(
-        email="super-admin@bitehub.local",
-        password=None,
-        full_name="Bite Hub Super Admin",
-        phone_number="0990000001",
-    )
-    user.set_unusable_password()
-    user.save(update_fields=["password"])
-    return user
-
-
-def _get_or_create_dev_cafe_user() -> User:
-    cafe = (
-        Cafe.objects.filter(is_active=True, owner__isnull=False)
-        .select_related("owner")
-        .order_by("name")
-        .first()
-    )
-    if cafe and cafe.owner:
-        user = cafe.owner
-        if not user.is_staff:
-            user.is_staff = True
-            user.save(update_fields=["is_staff"])
-        return user
-
-    user, created = User.objects.get_or_create(
-        email="demo-cafe@bitehub.local",
-        defaults={
-            "full_name": "Demo Cafe Manager",
-            "phone_number": "0990000002",
-            "is_staff": True,
-        },
-    )
-    updates = []
-    if created:
-        user.set_unusable_password()
-        updates.append("password")
-    if not user.is_staff:
-        user.is_staff = True
-        updates.append("is_staff")
-    if updates:
-        user.save(update_fields=updates)
-
-    cafe = Cafe.objects.filter(is_active=True).order_by("name").first()
-    if cafe is None:
-        cafe, _ = Cafe.objects.get_or_create(
-            code="demo-cafe",
-            defaults={
-                "name": "Demo Cafe",
-                "owner": user,
-                "is_active": True,
-            },
-        )
-        cafe_updates = []
-        if cafe.owner_id != user.id:
-            cafe.owner = user
-            cafe_updates.append("owner")
-        if not cafe.is_active:
-            cafe.is_active = True
-            cafe_updates.append("is_active")
-        if cafe_updates:
-            cafe.save(update_fields=cafe_updates)
-    elif cafe.owner_id is None:
-        cafe.owner = user
-        cafe.save(update_fields=["owner"])
-
-    return user
-
-
-def _dev_passwordless_login(request: HttpRequest, role: str) -> HttpResponse | None:
-    if not _passwordless_backoffice_enabled():
-        return None
-
-    if role == "super_admin":
-        user = _get_or_create_dev_super_admin()
-    elif role == "cafe":
-        user = _get_or_create_dev_cafe_user()
-    else:
-        return None
-
-    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-    return redirect("core:route_after_login")
-
-
 def _login_context(**extra) -> dict:
     context = {
-        "passwordless_demo_enabled": _passwordless_backoffice_enabled(),
         "portal": "admin",
     }
     context.update(extra)
@@ -161,10 +67,10 @@ def _login_role_context(*, portal: str, cafe: Cafe | None = None) -> dict:
         return {
             "portal": "cafe",
             "target_cafe": cafe,
+            "cafe_options": get_cafe_login_options(),
             "login_action_url": _login_action_url(portal="cafe", cafe=cafe),
-            "page_title": cafe.name if cafe else "دخول مركز عمليات المقهى",
-            "page_subtitle": "بوابة تشغيل للمبيعات والطلبات والمحافظ وبطاقات NFC.",
-            "username_label": "البريد الإلكتروني أو رقم مدير المقهى",
+            "page_title": "دخول مركز عمليات المقهى",
+            "page_subtitle": "اختر الكلية ثم أدخل كلمة المرور الخاصة بمشغل المقهى.",
             "submit_label": "دخول مركز العمليات",
             "alternate_login_url": reverse("core:admin_login"),
             "alternate_login_label": "دخول السوبر أدمن",
@@ -172,10 +78,10 @@ def _login_role_context(*, portal: str, cafe: Cafe | None = None) -> dict:
     return {
         "portal": "admin",
         "target_cafe": None,
+        "cafe_options": [],
         "login_action_url": reverse("core:admin_login"),
         "page_title": "دخول مركز الإدارة العليا",
-        "page_subtitle": "بوابة مركزية لإدارة المقاهي والأداء وروابط التشغيل.",
-        "username_label": "البريد الإلكتروني أو رقم الهاتف",
+        "page_subtitle": "دخول محمي بكلمة مرور السوبر أدمن فقط.",
         "submit_label": "دخول مركز الإدارة",
         "alternate_login_url": reverse("core:cafe_login"),
         "alternate_login_label": "دخول مركز عمليات مقهى",
@@ -199,6 +105,33 @@ def _authenticated_login_destination(user: User, *, portal: str, cafe: Cafe | No
     return None
 
 
+def get_cafe_login_options():
+    return (
+        Cafe.objects.filter(is_active=True, owner__isnull=False)
+        .select_related("faculty", "owner")
+        .order_by("faculty__name", "name")
+    )
+
+
+def _resolve_admin_login_user() -> User | None:
+    configured_email = getattr(settings, "BACKOFFICE_SUPER_ADMIN_EMAIL", "")
+    if configured_email:
+        user = User.objects.filter(email__iexact=configured_email, is_active=True, is_superuser=True).first()
+        if user:
+            return user
+    return User.objects.filter(is_active=True, is_superuser=True).order_by("id").first()
+
+
+def _resolve_cafe_for_login(raw_cafe_id: str | None, target_cafe: Cafe | None = None) -> Cafe | None:
+    if target_cafe is not None:
+        return target_cafe
+    try:
+        cafe_id = int(raw_cafe_id or 0)
+    except (TypeError, ValueError):
+        return None
+    return Cafe.objects.filter(id=cafe_id, is_active=True, owner__isnull=False).select_related("owner").first()
+
+
 # ???? ???? custom_login ?????? ????? ?????? ?? ????? ????.
 def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | None = None) -> HttpResponse:
     portal = "cafe" if portal == "cafe" else "admin"
@@ -209,8 +142,6 @@ def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | N
             messages.error(request, "رابط المقهى غير صحيح أو غير مفعل.")
             return redirect("core:cafe_login")
 
-    # ??? ??????? prefill_username ??? ????? ??? ???? ???? ???? ????? ????.
-    prefill_username = request.GET.get("phone") or request.GET.get("username") or ""
     base_context = _login_role_context(portal=portal, cafe=target_cafe)
 
     if request.user.is_authenticated:
@@ -220,29 +151,33 @@ def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | N
         logout(request)
 
     if request.method == "POST":
-        dev_role = request.POST.get("dev_role", "")
-        if (portal == "admin" and dev_role == "super_admin") or (portal == "cafe" and dev_role == "cafe"):
-            dev_login_response = _dev_passwordless_login(request, dev_role)
-            if dev_login_response is not None:
-                return dev_login_response
-
-        # ??? ??????? username ??? ????? ??? ???? ???? ???? ????? ????.
-        username = (request.POST.get("username") or "").replace("-", "").replace(" ", "")
         # ??? ??????? password ??? ????? ??? ???? ???? ???? ????? ????.
         password = request.POST.get("password")
+        selected_cafe_id = (request.POST.get("cafe_id") or "").strip()
 
-        # ??? ??????? phone ??? ????? ??? ???? ???? ???? ????? ????.
-        phone = normalize_libyan_phone(username)
-        # ??? ??????? user_obj ??? ????? ??? ???? ???? ???? ????? ????.
-        user_obj = User.objects.filter(Q(phone_number=phone) | Q(secondary_phone_number=phone)).first()
-        if not user_obj:
-            # ??? ??????? user_obj ??? ????? ??? ???? ???? ???? ????? ????.
-            user_obj = User.objects.filter(email__iexact=username).first()
+        if portal == "admin":
+            admin_user = _resolve_admin_login_user()
+            if admin_user is None:
+                return render(
+                    request,
+                    "login.html",
+                    _login_context(**base_context, error="لم يتم العثور على حساب سوبر أدمن فعال."),
+                )
+            user = authenticate(request, username=admin_user.email, password=password)
+        else:
+            selected_cafe = _resolve_cafe_for_login(selected_cafe_id, target_cafe=target_cafe)
+            if selected_cafe is None or selected_cafe.owner is None:
+                return render(
+                    request,
+                    "login.html",
+                    _login_context(
+                        **base_context,
+                        error="اختر الكلية/المقهى أولاً.",
+                        selected_cafe_id=selected_cafe_id,
+                    ),
+                )
+            user = authenticate(request, username=selected_cafe.owner.email, password=password)
 
-        # ??? ??????? email_for_auth ??? ????? ??? ???? ???? ???? ????? ????.
-        email_for_auth = user_obj.email if user_obj else username
-        # ??? ??????? user ??? ????? ??? ???? ???? ???? ????? ????.
-        user = authenticate(request, username=email_for_auth, password=password)
         if user:
             if portal == "admin" and not user.is_superuser:
                 return render(
@@ -251,7 +186,6 @@ def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | N
                     _login_context(
                         **base_context,
                         error="هذا الرابط مخصص للسوبر أدمن فقط.",
-                        prefill_username=username or prefill_username,
                     ),
                 )
 
@@ -264,17 +198,17 @@ def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | N
                         _login_context(
                             **base_context,
                             error="هذا الرابط مخصص لحسابات المقاهي فقط.",
-                            prefill_username=username or prefill_username,
+                            selected_cafe_id=selected_cafe_id,
                         ),
                     )
-                if target_cafe is not None and user_cafe.id != target_cafe.id:
+                if selected_cafe is not None and user_cafe.id != selected_cafe.id:
                     return render(
                         request,
                         "login.html",
                         _login_context(
                             **base_context,
                             error="هذا الحساب غير مرتبط بهذا المقهى.",
-                            prefill_username=username or prefill_username,
+                            selected_cafe_id=selected_cafe_id,
                         ),
                     )
 
@@ -287,11 +221,11 @@ def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | N
             _login_context(
                 **base_context,
                 error="بيانات الدخول غير صحيحة.",
-                prefill_username=username or prefill_username,
+                selected_cafe_id=selected_cafe_id,
             ),
         )
 
-    return render(request, "login.html", _login_context(**base_context, prefill_username=prefill_username))
+    return render(request, "login.html", _login_context(**base_context, selected_cafe_id=str(target_cafe.id) if target_cafe else ""))
 
 
 # ???? ???? custom_logout ?????? ????? ?????? ?? ????? ????.
