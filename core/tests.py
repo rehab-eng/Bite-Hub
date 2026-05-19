@@ -642,6 +642,25 @@ class DashboardRenderSmokeTests(TestCase):
 
     # ???? ???? test_super_admin_dashboard_renders_polished_controls ?????? ????? ?????? ?? ????? ????.
     def test_super_admin_dashboard_renders_polished_controls(self):
+        category = Category.objects.create(cafe=self.cafe, name="Coffee")
+        product = Product.objects.create(
+            cafe=self.cafe,
+            category=category,
+            name="Latte",
+            price=Decimal("7.00"),
+        )
+        create_order(
+            user=self.student,
+            cafe_id=self.cafe.id,
+            payment_method="CASH",
+            total_price=Decimal("35.00"),
+            items_data=[
+                {
+                    "product_id": product.id,
+                    "quantity": 5,
+                }
+            ],
+        )
         self.client.force_login(self.superuser)
 
         # ??? ??????? response ??? ????? ??? ???? ???? ???? ????? ????.
@@ -651,6 +670,8 @@ class DashboardRenderSmokeTests(TestCase):
         self.assertContains(response, "confirmCafeToggleModal")
         self.assertContains(response, "js-toggle-cafe-form")
         self.assertContains(response, reverse("core:cafe_login_for_code", args=[self.cafe.code]))
+        self.assertContains(response, "الأصناف المباعة")
+        self.assertContains(response, "<td>5</td>", html=True)
         self.assertNotContains(response, reverse("core:cafe_panel"))
 
     def test_super_admin_cannot_open_cafe_operator_panel(self):

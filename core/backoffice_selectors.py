@@ -7,8 +7,8 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Q, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import Count, DecimalField, IntegerField, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 
 from .models import Cafe, Faculty, Order, OrderStatus, Product
@@ -125,17 +125,44 @@ def get_super_admin_cafe_breakdown(limit: int = 6):
 
 # ???? ???? get_all_cafes_for_admin ?????? ????? ?????? ?? ????? ????.
 def get_all_cafes_for_admin():
+    sales_subquery = (
+        Order.objects.filter(cafe=OuterRef("pk"))
+        .exclude(status=OrderStatus.CANCELLED)
+        .values("cafe")
+        .annotate(total=Sum("total_price"))
+        .values("total")[:1]
+    )
+    orders_subquery = (
+        Order.objects.filter(cafe=OuterRef("pk"))
+        .values("cafe")
+        .annotate(total=Count("id"))
+        .values("total")[:1]
+    )
+    sold_items_subquery = (
+        Order.objects.filter(cafe=OuterRef("pk"))
+        .exclude(status=OrderStatus.CANCELLED)
+        .values("cafe")
+        .annotate(total=Sum("items__quantity"))
+        .values("total")[:1]
+    )
     return (
         Cafe.objects.select_related("faculty", "owner")
         .annotate(
-            # ??? ??????? total_sales ??? ????? ??? ???? ???? ???? ????? ????.
-            total_sales=Sum(
-                "order_records__total_price",
-                # ??? ??????? filter ??? ????? ??? ???? ???? ???? ????? ????.
-                filter=~Q(order_records__status=OrderStatus.CANCELLED),
+            total_sales=Coalesce(
+                Subquery(sales_subquery, output_field=DecimalField(max_digits=10, decimal_places=2)),
+                Value(0),
+                output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
-            # ??? ??????? total_orders ??? ????? ??? ???? ???? ???? ????? ????.
-            total_orders=Count("order_records"),
+            total_orders=Coalesce(
+                Subquery(orders_subquery, output_field=IntegerField()),
+                Value(0),
+                output_field=IntegerField(),
+            ),
+            sold_items=Coalesce(
+                Subquery(sold_items_subquery, output_field=IntegerField()),
+                Value(0),
+                output_field=IntegerField(),
+            ),
         )
         .order_by("name")
     )

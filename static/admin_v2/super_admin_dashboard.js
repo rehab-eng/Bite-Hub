@@ -7,11 +7,31 @@
     ? bootstrap.Modal.getOrCreateInstance(confirmCafeToggleModalNode)
     : null;
 
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(";").shift();
+    }
+    return "";
+  }
+
+  function submitWithFreshCsrf(form) {
+    const token = getCookie("csrftoken");
+    const input = form.querySelector("input[name='csrfmiddlewaretoken']");
+    if (token && input) {
+      input.value = token;
+    }
+    form.submit();
+  }
+
   document.querySelectorAll(".js-toggle-cafe-button").forEach((button) => {
     button.addEventListener("click", () => {
       pendingCafeToggleForm = button.closest(".js-toggle-cafe-form");
       if (!pendingCafeToggleForm || !confirmCafeToggleModal) {
-        pendingCafeToggleForm?.submit();
+        if (pendingCafeToggleForm) {
+          submitWithFreshCsrf(pendingCafeToggleForm);
+        }
         return;
       }
 
@@ -26,7 +46,7 @@
 
   confirmCafeToggleSubmit?.addEventListener("click", () => {
     if (pendingCafeToggleForm) {
-      pendingCafeToggleForm.submit();
+      submitWithFreshCsrf(pendingCafeToggleForm);
     }
   });
 

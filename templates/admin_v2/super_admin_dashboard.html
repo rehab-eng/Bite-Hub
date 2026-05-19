@@ -246,6 +246,7 @@
                 <th>رابط الدخول</th>
                 <th>الحالة</th>
                 <th>الطلبات</th>
+                <th>الأصناف المباعة</th>
                 <th>الإجراء</th>
               </tr>
             </thead>
@@ -272,6 +273,7 @@
                     {% endif %}
                   </td>
                   <td>{{ cafe.total_orders|default:0 }}</td>
+                  <td>{{ cafe.sold_items|default:0 }}</td>
                   <td>
                     <form
                       method="post"
