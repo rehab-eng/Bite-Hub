@@ -872,6 +872,7 @@ class DashboardRenderSmokeTests(TestCase):
         self.assertEqual(len(payload["orders"]), 1)
         self.assertEqual(payload["orders"][0]["id"], order.id)
 
+    @override_settings(BACKOFFICE_SUPER_ADMIN_EMAIL="admin@example.com")
     def test_super_admin_password_only_login_opens_dashboard(self):
         response = self.client.post(
             reverse("core:login"),
