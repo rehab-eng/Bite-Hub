@@ -179,10 +179,6 @@ def get_recent_error_snapshots(limit: int = 10):
 
 # ???? ???? resolve_backoffice_cafe ?????? ????? ?????? ?? ????? ????.
 def resolve_backoffice_cafe(user, *, cafe_id=None):
-    if getattr(user, "is_superuser", False):
-        if cafe_id:
-            return Cafe.objects.filter(pk=cafe_id, is_active=True).select_related("faculty", "owner").first()
-        return Cafe.objects.filter(is_active=True).select_related("faculty", "owner").order_by("name").first()
     return (
         Cafe.objects.filter(owner=user, is_active=True)
         .select_related("faculty", "owner")

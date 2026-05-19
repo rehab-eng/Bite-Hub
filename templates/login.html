@@ -2,99 +2,164 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - بايت هوب</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <link rel="manifest" href="{% url 'core:manifest' %}">
-    
-    <style>
-        body {
-            background-color: #f0f2f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            padding: 2.5rem;
-            border: none;
-            border-radius: 1rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            background: white;
-        }
-        .brand-logo {
-            color: #0d6efd;
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-        .btn-primary {
-            padding: 0.8rem;
-            font-weight: bold;
-            border-radius: 0.5rem;
-        }
-        .form-control {
-            border-radius: 0.5rem;
-            padding: 0.8rem 1rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title|default:"تسجيل الدخول" }} | Bite Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="{% url 'core:manifest' %}">
+  <style>
+    :root {
+      --bh-ink: #111827;
+      --bh-muted: #64748b;
+      --bh-border: rgba(15, 23, 42, .12);
+      --bh-accent: #0f766e;
+      --bh-accent-soft: rgba(15, 118, 110, .12);
+    }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: "Cairo", sans-serif;
+      color: var(--bh-ink);
+      background: #f3f7fb;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .login-shell {
+      width: min(100%, 460px);
+    }
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      background: linear-gradient(135deg, #0f766e, #f97316);
+    }
+    .brand-name {
+      font-weight: 800;
+      font-size: 1.25rem;
+    }
+    .login-card {
+      background: #fff;
+      border: 1px solid var(--bh-border);
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .08);
+      padding: 28px;
+    }
+    .portal-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--bh-accent-soft);
+      color: var(--bh-accent);
+      font-weight: 800;
+      font-size: .84rem;
+      margin-bottom: 14px;
+    }
+    .login-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      margin: 0 0 6px;
+    }
+    .login-subtitle {
+      color: var(--bh-muted);
+      margin-bottom: 24px;
+    }
+    .form-control {
+      min-height: 54px;
+      border-radius: 12px;
+    }
+    .btn-primary {
+      min-height: 52px;
+      border-radius: 999px;
+      border: 0;
+      font-weight: 800;
+      background: var(--bh-accent);
+    }
+    .btn-primary:hover {
+      background: #0d665f;
+    }
+    .secondary-link {
+      color: var(--bh-accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .secondary-link:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-
-    <div class="login-card text-center">
-        <h1 class="brand-logo mb-2">BITE HUB</h1>
-        <h3 class="mb-3">تسجيل الدخول</h3>
-        <p class="text-muted mb-4">مرحباً بك في لوحة تحكم المقاهي</p>
-
-        {% if passwordless_demo_enabled %}
-            <div class="d-grid gap-2 mb-4">
-                <form method="POST" action="{% url 'core:login' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="dev_role" value="super_admin">
-                    <button type="submit" class="btn btn-dark w-100">دخول السوبر أدمن بدون كلمة مرور</button>
-                </form>
-                <form method="POST" action="{% url 'core:login' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="dev_role" value="cafe">
-                    <button type="submit" class="btn btn-outline-primary w-100">دخول منظومة المقاهي بدون كلمة مرور</button>
-                </form>
-            </div>
-            <div class="text-muted small mb-3">أو استخدم تسجيل الدخول العادي</div>
-        {% endif %}
-
-        <form method="POST" action="{% url 'core:login' %}">
-            {% csrf_token %}
-            
-            {% if error %}
-                <div class="alert alert-danger p-2 mb-3" role="alert">
-                    {{ error }}
-                </div>
-            {% endif %}
-
-            <div class="form-floating mb-3">
-                <input type="text" class="form-control" id="username" name="username" placeholder="09xxxxxxxx" value="{{ prefill_username|default:'' }}" required>
-                <label for="username">رقم الهاتف</label>
-            </div>
-
-            <div class="form-floating mb-4">
-                <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
-                <label for="password">كلمة المرور</label>
-            </div>
-
-            <div class="d-grid">
-                <button type="submit" class="btn btn-primary">دخول للمنظومة</button>
-            </div>
-        </form>
-
-        <div class="mt-4 text-muted small">
-            &copy; 2025 Bite Hub. All rights reserved.
-        </div>
+  <main class="login-shell">
+    <div class="brand-row">
+      <div class="brand-mark">BH</div>
+      <div>
+        <div class="brand-name">Bite Hub</div>
+        <div class="text-muted small">Control Center</div>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <section class="login-card">
+      <div class="text-center">
+        <div class="portal-badge">
+          {% if portal == "cafe" %}بوابة المقهى{% else %}بوابة الإدارة{% endif %}
+        </div>
+        <h1 class="login-title">{{ page_title|default:"تسجيل الدخول" }}</h1>
+        <p class="login-subtitle">{{ page_subtitle }}</p>
+      </div>
+
+      {% if passwordless_demo_enabled %}
+        <form method="POST" action="{{ login_action_url }}" class="mb-3">
+          {% csrf_token %}
+          <input type="hidden" name="dev_role" value="{% if portal == 'cafe' %}cafe{% else %}super_admin{% endif %}">
+          <button type="submit" class="btn btn-outline-dark w-100 rounded-pill">
+            دخول تجريبي
+          </button>
+        </form>
+      {% endif %}
+
+      <form method="POST" action="{{ login_action_url }}">
+        {% csrf_token %}
+
+        {% if error %}
+          <div class="alert alert-danger py-2 mb-3" role="alert">
+            {{ error }}
+          </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label for="username" class="form-label fw-bold">{{ username_label }}</label>
+          <input type="text" class="form-control" id="username" name="username" value="{{ prefill_username|default:'' }}" required>
+        </div>
+
+        <div class="mb-4">
+          <label for="password" class="form-label fw-bold">كلمة المرور</label>
+          <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">{{ submit_label }}</button>
+      </form>
+
+      <div class="text-center mt-4 small">
+        <a class="secondary-link" href="{{ alternate_login_url }}">{{ alternate_login_label }}</a>
+      </div>
+    </section>
+  </main>
 </body>
 </html>

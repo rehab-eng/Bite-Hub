@@ -129,7 +129,10 @@ def _dev_passwordless_login(request: HttpRequest, role: str) -> HttpResponse | N
 
 
 def _login_context(**extra) -> dict:
-    context = {"passwordless_demo_enabled": _passwordless_backoffice_enabled()}
+    context = {
+        "passwordless_demo_enabled": _passwordless_backoffice_enabled(),
+        "portal": "admin",
+    }
     context.update(extra)
     return context
 
@@ -139,18 +142,67 @@ def _is_staff_or_superuser(user) -> bool:
     return bool(user.is_authenticated and (user.is_staff or user.is_superuser or getattr(user, "my_cafe", None)))
 
 
+def _is_cafe_operator(user) -> bool:
+    return bool(user.is_authenticated and not user.is_superuser and (user.is_staff or getattr(user, "my_cafe", None)))
+
+
+def _login_action_url(*, portal: str, cafe: Cafe | None = None) -> str:
+    if portal == "cafe":
+        if cafe is not None:
+            return reverse("core:cafe_login_for_code", kwargs={"cafe_code": cafe.code})
+        return reverse("core:cafe_login")
+    return reverse("core:admin_login")
+
+
+def _login_role_context(*, portal: str, cafe: Cafe | None = None) -> dict:
+    if portal == "cafe":
+        return {
+            "portal": "cafe",
+            "target_cafe": cafe,
+            "login_action_url": _login_action_url(portal="cafe", cafe=cafe),
+            "page_title": cafe.name if cafe else "دخول لوحة المقهى",
+            "page_subtitle": "بوابة تشغيل خاصة بالمقهى والطلبات والمنتجات.",
+            "username_label": "البريد الإلكتروني أو رقم مدير المقهى",
+            "submit_label": "دخول لوحة المقهى",
+            "alternate_login_url": reverse("core:admin_login"),
+            "alternate_login_label": "دخول السوبر أدمن",
+        }
+    return {
+        "portal": "admin",
+        "target_cafe": None,
+        "login_action_url": reverse("core:admin_login"),
+        "page_title": "دخول السوبر أدمن",
+        "page_subtitle": "بوابة الإدارة العليا لمتابعة المقاهي والعمليات.",
+        "username_label": "البريد الإلكتروني أو رقم الهاتف",
+        "submit_label": "دخول لوحة الإدارة",
+        "alternate_login_url": reverse("core:cafe_login"),
+        "alternate_login_label": "دخول لوحة مقهى",
+    }
+
+
 # ???? ???? custom_login ?????? ????? ?????? ?? ????? ????.
-def custom_login(request: HttpRequest) -> HttpResponse:
+def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | None = None) -> HttpResponse:
     if request.user.is_authenticated:
         return redirect("core:route_after_login")
 
+    portal = "cafe" if portal == "cafe" else "admin"
+    target_cafe = None
+    if cafe_code:
+        target_cafe = Cafe.objects.filter(code=cafe_code, is_active=True).select_related("owner").first()
+        if target_cafe is None:
+            messages.error(request, "رابط المقهى غير صحيح أو غير مفعل.")
+            return redirect("core:cafe_login")
+
     # ??? ??????? prefill_username ??? ????? ??? ???? ???? ???? ????? ????.
     prefill_username = request.GET.get("phone") or request.GET.get("username") or ""
+    base_context = _login_role_context(portal=portal, cafe=target_cafe)
 
     if request.method == "POST":
-        dev_login_response = _dev_passwordless_login(request, request.POST.get("dev_role", ""))
-        if dev_login_response is not None:
-            return dev_login_response
+        dev_role = request.POST.get("dev_role", "")
+        if (portal == "admin" and dev_role == "super_admin") or (portal == "cafe" and dev_role == "cafe"):
+            dev_login_response = _dev_passwordless_login(request, dev_role)
+            if dev_login_response is not None:
+                return dev_login_response
 
         # ??? ??????? username ??? ????? ??? ???? ???? ???? ????? ????.
         username = (request.POST.get("username") or "").replace("-", "").replace(" ", "")
@@ -170,6 +222,40 @@ def custom_login(request: HttpRequest) -> HttpResponse:
         # ??? ??????? user ??? ????? ??? ???? ???? ???? ????? ????.
         user = authenticate(request, username=email_for_auth, password=password)
         if user:
+            if portal == "admin" and not user.is_superuser:
+                return render(
+                    request,
+                    "login.html",
+                    _login_context(
+                        **base_context,
+                        error="هذا الرابط مخصص للسوبر أدمن فقط.",
+                        prefill_username=username or prefill_username,
+                    ),
+                )
+
+            user_cafe = getattr(user, "my_cafe", None)
+            if portal == "cafe":
+                if user.is_superuser or user_cafe is None:
+                    return render(
+                        request,
+                        "login.html",
+                        _login_context(
+                            **base_context,
+                            error="هذا الرابط مخصص لحسابات المقاهي فقط.",
+                            prefill_username=username or prefill_username,
+                        ),
+                    )
+                if target_cafe is not None and user_cafe.id != target_cafe.id:
+                    return render(
+                        request,
+                        "login.html",
+                        _login_context(
+                            **base_context,
+                            error="هذا الحساب غير مرتبط بهذا المقهى.",
+                            prefill_username=username or prefill_username,
+                        ),
+                    )
+
             login(request, user)
             return redirect("core:route_after_login")
 
@@ -177,12 +263,13 @@ def custom_login(request: HttpRequest) -> HttpResponse:
             request,
             "login.html",
             _login_context(
+                **base_context,
                 error="بيانات الدخول غير صحيحة.",
                 prefill_username=username or prefill_username,
             ),
         )
 
-    return render(request, "login.html", _login_context(prefill_username=prefill_username))
+    return render(request, "login.html", _login_context(**base_context, prefill_username=prefill_username))
 
 
 # ???? ???? custom_logout ?????? ????? ?????? ?? ????? ????.
@@ -200,9 +287,9 @@ def switch_cafe(request: HttpRequest, cafe_id: int) -> HttpResponse:
     logout(request)
     # ??? ??????? cafe ??? ????? ??? ???? ???? ???? ????? ????.
     cafe = Cafe.objects.filter(id=cafe_id, owner__isnull=False).select_related("owner").first()
-    if cafe and cafe.owner and cafe.owner.phone_number:
-        return redirect(f"{reverse('core:login')}?phone={cafe.owner.phone_number}")
-    return redirect("core:login")
+    if cafe and cafe.owner:
+        return redirect("core:cafe_login_for_code", cafe_code=cafe.code)
+    return redirect("core:cafe_login")
 
 
 # ???? ???? _resolve_web_home_for_user ?????? ????? ?????? ?? ????? ????.
@@ -246,7 +333,7 @@ def _parse_optional_faculty_id(raw_value: str | None) -> int | None:
 
 
 # ???? ???? super_admin_dashboard ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
+@login_required(login_url="core:admin_login")
 @user_passes_test(lambda user: user.is_superuser, login_url="core:route_after_login")
 def super_admin_dashboard(request: HttpRequest) -> HttpResponse:
     # ??? ??????? sales_series ??? ????? ??? ???? ???? ???? ????? ????.
@@ -276,7 +363,7 @@ def super_admin_dashboard(request: HttpRequest) -> HttpResponse:
 
 
 # ???? ???? create_cafe_from_dashboard ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
+@login_required(login_url="core:admin_login")
 @user_passes_test(lambda user: user.is_superuser, login_url="core:route_after_login")
 @require_POST
 def create_cafe_from_dashboard(request: HttpRequest) -> HttpResponse:
@@ -311,7 +398,7 @@ def create_cafe_from_dashboard(request: HttpRequest) -> HttpResponse:
 
 
 # ???? ???? toggle_cafe_status_from_dashboard ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
+@login_required(login_url="core:admin_login")
 @user_passes_test(lambda user: user.is_superuser, login_url="core:route_after_login")
 @require_POST
 def toggle_cafe_status_from_dashboard(request: HttpRequest, cafe_id: int) -> HttpResponse:
@@ -327,7 +414,7 @@ def toggle_cafe_status_from_dashboard(request: HttpRequest, cafe_id: int) -> Htt
 
 
 # ???? ???? create_cafe_api ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
+@login_required(login_url="core:admin_login")
 @user_passes_test(lambda user: user.is_superuser, login_url="core:route_after_login")
 @require_POST
 def create_cafe_api(request: HttpRequest) -> JsonResponse:
@@ -373,7 +460,7 @@ def create_cafe_api(request: HttpRequest) -> JsonResponse:
 
 
 # ???? ???? toggle_cafe_status_api ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
+@login_required(login_url="core:admin_login")
 @user_passes_test(lambda user: user.is_superuser, login_url="core:route_after_login")
 @require_POST
 def toggle_cafe_status_api(request: HttpRequest, cafe_id: int) -> JsonResponse:
@@ -397,16 +484,14 @@ def toggle_cafe_status_api(request: HttpRequest, cafe_id: int) -> JsonResponse:
 
 
 # ???? ???? cafe_panel ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
-@user_passes_test(_is_staff_or_superuser, login_url="core:route_after_login")
+@login_required(login_url="core:cafe_login")
+@user_passes_test(_is_cafe_operator, login_url="core:route_after_login")
 def cafe_panel(request: HttpRequest) -> HttpResponse:
     # ??? ??????? cafe ??? ????? ??? ???? ???? ???? ????? ????.
     cafe = resolve_backoffice_cafe(request.user, cafe_id=request.GET.get("cafe_id"))
     if cafe is None:
         messages.error(request, "No active cafe is linked to this account.")
-        if request.user.is_superuser:
-            return redirect("core:super_admin_dashboard")
-        return redirect("core:login")
+        return redirect("core:cafe_login")
 
     # ??? ??????? snapshot ??? ????? ??? ???? ???? ???? ????? ????.
     snapshot = get_cafe_panel_snapshot(cafe.id)
@@ -429,8 +514,8 @@ def cafe_panel(request: HttpRequest) -> HttpResponse:
     return render(request, "admin_v2/cafe_panel.html", context)
 
 
-@login_required(login_url="core:login")
-@user_passes_test(_is_staff_or_superuser, login_url="core:route_after_login")
+@login_required(login_url="core:cafe_login")
+@user_passes_test(_is_cafe_operator, login_url="core:route_after_login")
 def cafe_panel_snapshot_api(request: HttpRequest) -> JsonResponse:
     cafe = resolve_backoffice_cafe(request.user, cafe_id=request.GET.get("cafe_id"))
     if cafe is None:
@@ -452,8 +537,8 @@ def cafe_panel_snapshot_api(request: HttpRequest) -> JsonResponse:
 
 
 # ???? ???? update_order_status_api ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
-@user_passes_test(_is_staff_or_superuser, login_url="core:route_after_login")
+@login_required(login_url="core:cafe_login")
+@user_passes_test(_is_cafe_operator, login_url="core:route_after_login")
 @require_POST
 def update_order_status_api(request: HttpRequest, order_id: int) -> JsonResponse:
     # ??? ??????? cafe ??? ????? ??? ???? ???? ???? ????? ????.
@@ -482,8 +567,8 @@ def update_order_status_api(request: HttpRequest, order_id: int) -> JsonResponse
 
 
 # ???? ???? toggle_product_stock_api ?????? ????? ?????? ?? ????? ????.
-@login_required(login_url="core:login")
-@user_passes_test(_is_staff_or_superuser, login_url="core:route_after_login")
+@login_required(login_url="core:cafe_login")
+@user_passes_test(_is_cafe_operator, login_url="core:route_after_login")
 @require_POST
 def toggle_product_stock_api(request: HttpRequest, product_id: int) -> JsonResponse:
     # ??? ??????? cafe ??? ????? ??? ???? ???? ???? ????? ????.
@@ -520,8 +605,8 @@ def toggle_product_stock_api(request: HttpRequest, product_id: int) -> JsonRespo
     )
 
 
-@login_required(login_url="core:login")
-@user_passes_test(_is_staff_or_superuser, login_url="core:route_after_login")
+@login_required(login_url="core:cafe_login")
+@user_passes_test(_is_cafe_operator, login_url="core:route_after_login")
 @require_POST
 def save_product_api(request: HttpRequest, product_id: int | None = None) -> JsonResponse:
     cafe = resolve_backoffice_cafe(request.user, cafe_id=request.POST.get("cafe_id"))

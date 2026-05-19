@@ -598,6 +598,17 @@ class DashboardRenderSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "confirmCafeToggleModal")
         self.assertContains(response, "js-toggle-cafe-form")
+        self.assertContains(response, reverse("core:cafe_login_for_code", args=[self.cafe.code]))
+        self.assertNotContains(response, reverse("core:cafe_panel"))
+
+    def test_super_admin_cannot_open_cafe_operator_panel(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.get(reverse("core:cafe_panel"), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "confirmCafeToggleModal")
+        self.assertNotContains(response, "confirmCafePanelActionModal")
 
     # ???? ???? test_cafe_panel_renders_confirmation_modal ?????? ????? ?????? ?? ????? ????.
     def test_cafe_panel_renders_confirmation_modal(self):
@@ -657,10 +668,19 @@ class DashboardRenderSmokeTests(TestCase):
     @override_settings(DEBUG=True)
     def test_dev_passwordless_cafe_login_opens_panel(self):
         response = self.client.post(
-            reverse("core:login"),
+            reverse("core:cafe_login"),
             data={"dev_role": "cafe"},
             follow=True,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "confirmCafePanelActionModal")
+
+    def test_role_specific_login_pages_render_distinct_actions(self):
+        admin_response = self.client.get(reverse("core:admin_login"))
+        cafe_response = self.client.get(reverse("core:cafe_login_for_code", args=[self.cafe.code]))
+
+        self.assertEqual(admin_response.status_code, 200)
+        self.assertEqual(cafe_response.status_code, 200)
+        self.assertContains(admin_response, reverse("core:admin_login"))
+        self.assertContains(cafe_response, reverse("core:cafe_login_for_code", args=[self.cafe.code]))

@@ -7,7 +7,10 @@ app_name = 'core'
 # ??? ??????? urlpatterns ??? ????? ??? ???? ???? ???? ????? ????.
 urlpatterns = [
     # Auth + V2 entry
-    path('login/', backoffice_views.custom_login, name='login'),
+    path('login/', backoffice_views.custom_login, {"portal": "admin"}, name='login'),
+    path('admin/login/', backoffice_views.custom_login, {"portal": "admin"}, name='admin_login'),
+    path('cafe/login/', backoffice_views.custom_login, {"portal": "cafe"}, name='cafe_login'),
+    path('cafe/<slug:cafe_code>/login/', backoffice_views.custom_login, {"portal": "cafe"}, name='cafe_login_for_code'),
     path('logout/', backoffice_views.custom_logout, name='logout'),
     path('switch-cafe/<int:cafe_id>/', backoffice_views.switch_cafe, name='switch_cafe'),
     path('', backoffice_views.route_after_login, name='route_after_login'),

@@ -243,6 +243,7 @@
                 <th>المقهى</th>
                 <th>الكلية</th>
                 <th>الكود</th>
+                <th>رابط الدخول</th>
                 <th>الحالة</th>
                 <th>الطلبات</th>
                 <th>الإجراء</th>
@@ -254,6 +255,15 @@
                   <td class="fw-bold">{{ cafe.name }}</td>
                   <td>{{ cafe.faculty.name|default:"-" }}</td>
                   <td><code>{{ cafe.code }}</code></td>
+                  <td>
+                    {% if cafe.owner_id %}
+                      <a class="btn btn-sm btn-outline-dark rounded-pill" href="{% url 'core:cafe_login_for_code' cafe.code %}" target="_blank" rel="noopener">
+                        فتح رابط المقهى
+                      </a>
+                    {% else %}
+                      <span class="text-muted small">اربط مديرًا أولًا</span>
+                    {% endif %}
+                  </td>
                   <td>
                     {% if cafe.is_active %}
                       <span class="badge text-bg-success"><span class="status-dot active"></span>نشط</span>
