@@ -480,6 +480,68 @@
     [data-cafe-section-panel][hidden] {
       display: none !important;
     }
+    [data-cafe-section-panel="overview"] .bh-kpi {
+      min-height: 132px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cafe-identity-card {
+      min-height: 132px;
+      padding: 18px;
+      border-top: 4px solid var(--bh-byte-sky);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(74, 166, 220, .18), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,.98), rgba(255, 241, 0, .10), rgba(245, 31, 46, .05));
+    }
+    .cafe-identity-copy {
+      min-width: 0;
+    }
+    .cafe-identity-label {
+      color: #667085;
+      font-size: .82rem;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .cafe-identity-name {
+      color: #08111f;
+      font-size: clamp(1.12rem, 1.2vw, 1.38rem);
+      font-weight: 950;
+      line-height: 1.28;
+      overflow-wrap: anywhere;
+    }
+    .cafe-identity-code {
+      direction: ltr;
+      display: inline-flex;
+      max-width: 100%;
+      margin-top: 10px;
+      padding: 5px 9px;
+      border-radius: 8px;
+      color: #4357b8;
+      background: rgba(67, 87, 184, .08);
+      font-size: .72rem;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cafe-identity-mark {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      color: #fff;
+      font-weight: 950;
+      letter-spacing: 0;
+      background: var(--bh-brand-gradient);
+      box-shadow: 0 14px 28px rgba(67, 87, 184, .20);
+    }
     .ops-command.is-active {
       color: #263789;
       border-color: rgba(245, 31, 46, .32);
@@ -701,9 +763,13 @@
 
   <div class="row g-4 mb-4" data-cafe-section-panel="overview">
     <div class="col-12 col-md-6 col-xl-3">
-      <div class="bh-card bh-kpi is-cyan">
-        <div class="label">المقهى</div>
-        <div class="value fs-3">{{ cafe.name }}</div>
+      <div class="bh-card cafe-identity-card">
+        <div class="cafe-identity-copy">
+          <div class="cafe-identity-label">الكلية / نقطة التشغيل</div>
+          <div class="cafe-identity-name">{{ cafe.faculty.name|default:cafe.name }}</div>
+          <div class="cafe-identity-code">{{ cafe.code }}</div>
+        </div>
+        <div class="cafe-identity-mark">BH</div>
       </div>
     </div>
     <div class="col-12 col-md-6 col-xl-3">
