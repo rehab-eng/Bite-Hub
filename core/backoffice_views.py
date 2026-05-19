@@ -180,11 +180,25 @@ def _login_role_context(*, portal: str, cafe: Cafe | None = None) -> dict:
     }
 
 
+def _authenticated_login_destination(user: User, *, portal: str, cafe: Cafe | None = None) -> str | None:
+    if not user.is_authenticated:
+        return None
+    if portal == "admin":
+        if user.is_superuser:
+            return "core:super_admin_dashboard"
+        return None
+
+    if user.is_superuser:
+        return None
+
+    user_cafe = getattr(user, "my_cafe", None)
+    if user_cafe is not None and (cafe is None or user_cafe.id == cafe.id):
+        return "core:cafe_panel"
+    return None
+
+
 # ???? ???? custom_login ?????? ????? ?????? ?? ????? ????.
 def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | None = None) -> HttpResponse:
-    if request.user.is_authenticated:
-        return redirect("core:route_after_login")
-
     portal = "cafe" if portal == "cafe" else "admin"
     target_cafe = None
     if cafe_code:
@@ -196,6 +210,12 @@ def custom_login(request: HttpRequest, portal: str = "admin", cafe_code: str | N
     # ??? ??????? prefill_username ??? ????? ??? ???? ???? ???? ????? ????.
     prefill_username = request.GET.get("phone") or request.GET.get("username") or ""
     base_context = _login_role_context(portal=portal, cafe=target_cafe)
+
+    if request.user.is_authenticated:
+        destination = _authenticated_login_destination(request.user, portal=portal, cafe=target_cafe)
+        if destination is not None:
+            return redirect(destination)
+        logout(request)
 
     if request.method == "POST":
         dev_role = request.POST.get("dev_role", "")

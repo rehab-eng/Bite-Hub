@@ -610,6 +610,17 @@ class DashboardRenderSmokeTests(TestCase):
         self.assertContains(response, "confirmCafeToggleModal")
         self.assertNotContains(response, "confirmCafePanelActionModal")
 
+    def test_super_admin_opening_cafe_login_link_sees_cafe_login(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.get(reverse("core:cafe_login_for_code", args=[self.cafe.code]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "بوابة المقهى")
+        self.assertContains(response, self.cafe.name)
+        self.assertNotContains(response, "confirmCafeToggleModal")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
     # ???? ???? test_cafe_panel_renders_confirmation_modal ?????? ????? ?????? ?? ????? ????.
     def test_cafe_panel_renders_confirmation_modal(self):
         self.client.force_login(self.cashier)
