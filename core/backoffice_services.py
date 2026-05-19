@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.cache import cache
@@ -30,6 +32,33 @@ def _build_unique_cafe_code(name: str) -> str:
         candidate = f"{base_code}-{suffix}"
         suffix += 1
     return candidate
+
+
+def _build_unique_faculty_code(name: str) -> str:
+    base_code = slugify(name) or "faculty"
+    candidate = base_code
+    suffix = 2
+    while Faculty.objects.filter(code=candidate).exists():
+        candidate = f"{base_code}-{suffix}"
+        suffix += 1
+    return candidate
+
+
+def _build_unique_manager_email(code: str) -> str:
+    base = slugify(code) or "cafe"
+    candidate = f"{base}@bitehub.local"
+    suffix = 2
+    while User.objects.filter(email__iexact=candidate).exists():
+        candidate = f"{base}-{suffix}@bitehub.local"
+        suffix += 1
+    return candidate
+
+
+def _build_unique_manager_phone() -> str:
+    while True:
+        candidate = f"09{secrets.randbelow(100_000_000):08d}"
+        if not User.objects.filter(phone_number=candidate).exists():
+            return candidate
 
 
 # ???? ???? _get_existing_owner_cafe ?????? ????? ?????? ?? ????? ????.
@@ -163,6 +192,56 @@ def provision_cafe(
         image=image,
         # ??? ??????? is_active ??? ????? ??? ???? ???? ???? ????? ????.
         is_active=is_active,
+    )
+    return initialize_cafe_runtime(cafe)
+
+
+@transaction.atomic
+def provision_cafe_with_credentials(
+    *,
+    faculty_name: str,
+    password: str,
+    name: str = "",
+    code: str | None = None,
+) -> Cafe:
+    normalized_faculty_name = (faculty_name or "").strip()
+    if not normalized_faculty_name:
+        raise ValidationServiceError("College name is required.")
+
+    normalized_password = (password or "").strip()
+    if len(normalized_password) < 8:
+        raise ValidationServiceError("Cafe password must be at least 8 characters.")
+
+    faculty = Faculty.objects.filter(name__iexact=normalized_faculty_name).first()
+    if faculty is None:
+        faculty = Faculty.objects.create(
+            name=normalized_faculty_name,
+            code=_build_unique_faculty_code(normalized_faculty_name),
+            is_active=True,
+        )
+    elif not faculty.is_active:
+        faculty.is_active = True
+        faculty.save(update_fields=["is_active", "updated_at"])
+
+    cafe_name = (name or "").strip() or f"مقهى {faculty.name}"
+    normalized_code = slugify(code or "") or _build_unique_cafe_code(cafe_name)
+    if Cafe.objects.filter(code=normalized_code).exists():
+        raise ValidationServiceError("Cafe code is already in use.")
+
+    owner = User.objects.create_user(
+        email=_build_unique_manager_email(normalized_code),
+        password=normalized_password,
+        full_name=cafe_name,
+        phone_number=_build_unique_manager_phone(),
+        is_staff=True,
+    )
+
+    cafe = Cafe.objects.create(
+        name=cafe_name,
+        code=normalized_code,
+        faculty=faculty,
+        owner=owner,
+        is_active=True,
     )
     return initialize_cafe_runtime(cafe)
 

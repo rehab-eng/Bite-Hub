@@ -50,6 +50,32 @@
     }
   });
 
+  const generatedCafePassword = document.getElementById("generatedCafePassword");
+  const generateCafePassword = document.getElementById("generateCafePassword");
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+  function randomPassword() {
+    const bytes = new Uint32Array(14);
+    if (window.crypto?.getRandomValues) {
+      window.crypto.getRandomValues(bytes);
+    } else {
+      for (let index = 0; index < bytes.length; index += 1) {
+        bytes[index] = Math.floor(Math.random() * alphabet.length);
+      }
+    }
+    const value = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+    return `BH-${value.slice(0, 4)}-${value.slice(4, 9)}-${value.slice(9)}`;
+  }
+
+  generateCafePassword?.addEventListener("click", () => {
+    if (!generatedCafePassword) {
+      return;
+    }
+    generatedCafePassword.value = randomPassword();
+    generatedCafePassword.focus();
+    generatedCafePassword.select();
+  });
+
   const node = document.getElementById("sales-series-data");
   const canvas = document.getElementById("salesTrendChart");
   if (!node || !canvas || typeof Chart === "undefined") {

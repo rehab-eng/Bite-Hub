@@ -96,6 +96,24 @@
       width: 100% !important;
       height: 100% !important;
     }
+    .credential-workflow {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(67, 87, 184, .14);
+      background: linear-gradient(135deg, #fff, rgba(74, 166, 220, .07), rgba(255, 241, 0, .08));
+    }
+    .generated-password-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+    }
+    .credential-note {
+      color: #667085;
+      font-size: .84rem;
+      line-height: 1.7;
+    }
   </style>
 {% endblock %}
 
@@ -324,41 +342,30 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body pt-3">
-          <form method="post" action="{% url 'core:create_cafe_from_dashboard' %}" class="row g-3">
+          <form method="post" action="{% url 'core:create_cafe_from_dashboard' %}" class="row g-3" id="createCafeForm">
             {% csrf_token %}
+            <input type="hidden" name="name" value="">
+            <input type="hidden" name="code" value="">
             <div class="col-12">
-              <label class="form-label">اسم المقهى</label>
-              <input type="text" name="name" class="form-control form-control-lg rounded-2" placeholder="مثال: Cafe of Engineering" value="{{ cafe_form_data.name }}" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">الكلية</label>
-              <select name="faculty_id" class="form-select form-select-lg rounded-2">
-                <option value="">بدون كلية محددة</option>
-                {% for faculty in faculties %}
-                  <option value="{{ faculty.id }}" {% if cafe_form_data.faculty_id == faculty.id|stringformat:"s" %}selected{% endif %}>{{ faculty.name }}</option>
-                {% endfor %}
-              </select>
-              <div class="form-text">اختياري. يمكن إنشاء المقهى حتى لو لم تُسجل أي كلية بعد.</div>
-            </div>
-            <div class="col-12">
-              <label class="form-label">كود المقهى</label>
-              <input type="text" name="code" class="form-control form-control-lg rounded-2" placeholder="engineering-cafe" value="{{ cafe_form_data.code }}" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">مدير المقهى</label>
-              <select name="owner_id" class="form-select form-select-lg rounded-2">
-                <option value="">بدون مدير حاليا</option>
-                {% for manager in managers %}
-                  <option value="{{ manager.id }}" {% if cafe_form_data.owner_id == manager.id|stringformat:"s" %}selected{% endif %}>
-                    {{ manager.full_name|default:manager.email }} - {{ manager.email }}
-                  </option>
-                {% endfor %}
-              </select>
-              <div class="form-text">اختياري. عند اختيار مدير سيتم ربطه بالمقهى وتجهيز صلاحيات لوحة المقهى ومحفظته تلقائيا.</div>
+              <div class="credential-workflow">
+                <div>
+                  <label class="form-label">اسم الكلية</label>
+                  <input type="text" name="faculty_name" class="form-control form-control-lg rounded-2" placeholder="مثال: كلية تقنية المعلومات" value="{{ cafe_form_data.faculty_name }}" required>
+                  <div class="form-text">سيتم إنشاء مقهى وحساب تشغيل لهذه الكلية مباشرة.</div>
+                </div>
+                <div>
+                  <label class="form-label">كلمة مرور المقهى</label>
+                  <div class="generated-password-row">
+                    <input type="text" name="manager_password" id="generatedCafePassword" class="form-control form-control-lg rounded-2" placeholder="اضغط توليد أو اكتب كلمة مرور" required minlength="8" autocomplete="off">
+                    <button type="button" class="btn btn-outline-dark rounded-2 px-4" id="generateCafePassword">توليد</button>
+                  </div>
+                  <div class="credential-note mt-2">السوبر أدمن يعطي هذه الكلمة لصاحب المقهى. في صفحة دخول المقاهي سيختار الكلية ويدخل هذه الكلمة فقط.</div>
+                </div>
+              </div>
             </div>
             <div class="col-12 d-flex justify-content-end gap-2 pt-2">
               <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-              <button type="submit" class="btn btn-dark rounded-pill px-4">إنشاء المقهى</button>
+              <button type="submit" class="btn btn-dark rounded-pill px-4">إنشاء الكلية وكلمة المرور</button>
             </div>
           </form>
         </div>

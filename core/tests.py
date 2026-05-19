@@ -122,6 +122,41 @@ class CafeProvisioningTests(TestCase):
         manager.wallet.refresh_from_db()
         self.assertEqual(manager.wallet.college, "Medical Cafe")
 
+    def test_super_admin_creates_cafe_login_password_from_dashboard(self):
+        User = get_user_model()
+        superuser = User.objects.create_superuser(
+            email="root-password@example.com",
+            password="StrongPass123",
+            full_name="Root Admin",
+            phone_number="0911000020",
+        )
+        self.client.force_login(superuser)
+
+        response = self.client.post(
+            reverse("core:create_cafe_from_dashboard"),
+            data={
+                "faculty_name": "كلية تقنية المعلومات",
+                "manager_password": "CafePass@2026",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cafe = Cafe.objects.get(faculty__name="كلية تقنية المعلومات")
+        self.assertEqual(cafe.name, "مقهى كلية تقنية المعلومات")
+        self.assertIsNotNone(cafe.owner)
+        self.assertTrue(cafe.owner.check_password("CafePass@2026"))
+        self.assertTrue(cafe.owner.groups.filter(name=CAFE_OWNER_GROUP_NAME).exists())
+
+        self.client.logout()
+        login_response = self.client.post(
+            reverse("core:cafe_login"),
+            data={"cafe_id": cafe.id, "password": "CafePass@2026"},
+            follow=True,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertContains(login_response, "confirmCafePanelActionModal")
+
     def test_super_admin_cannot_assign_same_manager_to_two_cafes(self):
         User = get_user_model()
         manager = User.objects.create_user(
