@@ -85,26 +85,87 @@
     return template.replace(/0\/$/, `${id}/`);
   }
 
+  function showCafeSection(sectionName, { updateUrl = true } = {}) {
+    const allowedSections = ["overview", "orders", "wallets", "nfc", "menu"];
+    const activeSection = allowedSections.includes(sectionName) ? sectionName : "overview";
+    document.querySelectorAll("[data-cafe-section-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.cafeSectionPanel !== activeSection;
+    });
+    document.querySelectorAll("[data-cafe-section-link]").forEach((link) => {
+      const isActive = link.dataset.section === activeSection;
+      link.classList.toggle("active", isActive);
+      link.classList.toggle("is-active", isActive);
+      link.setAttribute("aria-current", isActive ? "page" : "false");
+    });
+    window.localStorage.setItem("bitehub:cafe-section", activeSection);
+    if (updateUrl) {
+      const nextHash = `#${activeSection}`;
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, "", nextHash);
+      }
+    }
+  }
+
+  function initialCafeSection() {
+    const hash = window.location.hash.replace("#", "");
+    return hash || window.localStorage.getItem("bitehub:cafe-section") || "overview";
+  }
+
+  document.addEventListener("click", (event) => {
+    const sectionLink = event.target.closest("[data-cafe-section-link]");
+    if (!sectionLink || !sectionLink.dataset.section) {
+      return;
+    }
+    const linkUrl = new URL(sectionLink.href, window.location.origin);
+    if (linkUrl.pathname !== window.location.pathname || linkUrl.search !== window.location.search) {
+      return;
+    }
+    event.preventDefault();
+    showCafeSection(sectionLink.dataset.section);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  window.addEventListener("hashchange", () => {
+    showCafeSection(initialCafeSection(), { updateUrl: false });
+  });
+
+  showCafeSection(initialCafeSection(), { updateUrl: false });
+
+  function escapeHtml(value) {
+    const span = document.createElement("span");
+    span.textContent = value == null ? "" : String(value);
+    return span.innerHTML;
+  }
+
   function createOrderCard(order, nextStatus, nextLabel) {
     const items = (order.items || [])
-      .map((item) => `<div class="line-item">${item.quantity}x ${item.product_name}</div>`)
+      .map((item) => `
+        <div class="line-item">
+          <span>${escapeHtml(item.product_name || "منتج")}</span>
+          <span class="line-qty">x${escapeHtml(item.quantity || 1)}</span>
+        </div>
+      `)
       .join("");
     const cancelButton = ["COMPLETED", "CANCELLED"].includes(order.status)
       ? ""
-      : `<button type="button" class="btn btn-outline-danger btn-sm rounded-2 px-3 js-order-action" data-order-id="${order.id}" data-status="CANCELLED">إلغاء</button>`;
+      : `<button type="button" class="btn btn-outline-danger btn-sm rounded-2 px-3 js-order-action order-secondary-action" data-order-id="${order.id}" data-status="CANCELLED">إلغاء</button>`;
+    const createdAt = order.created_at
+      ? new Date(order.created_at).toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" })
+      : "";
+    const customer = escapeHtml(order.user_name || order.user || "طالب");
 
     return `
-      <article class="kanban-card" data-order-id="${order.id}">
-        <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+      <article class="kanban-card order-ticket" data-order-id="${order.id}">
+        <div class="order-ticket-head">
           <div>
-            <div class="order-number">#${order.order_number || order.id}</div>
-            <div class="meta">${new Date(order.created_at).toLocaleTimeString("ar-LY", { hour: "2-digit", minute: "2-digit" })}</div>
+            <div class="order-number">#${escapeHtml(order.order_number || order.id)}</div>
+            <div class="meta">${createdAt} - ${customer}</div>
           </div>
-          <span class="badge text-bg-light">${order.total_price} د.ل</span>
+          <span class="order-price">${escapeHtml(order.total_price || "0.00")} د.ل</span>
         </div>
-        <div class="mb-3">${items || '<div class="line-item text-muted">بدون عناصر مسجلة</div>'}</div>
-        <div class="d-flex gap-2">
-          ${nextStatus ? `<button type="button" class="btn btn-dark btn-sm rounded-2 px-3 js-order-action" data-order-id="${order.id}" data-status="${nextStatus}">${nextLabel}</button>` : ""}
+        <div class="order-ticket-items">${items || '<div class="line-item text-muted">بدون عناصر مسجلة</div>'}</div>
+        <div class="order-ticket-footer">
+          ${nextStatus ? `<button type="button" class="btn btn-sm rounded-2 px-3 js-order-action order-primary-action" data-order-id="${order.id}" data-status="${nextStatus}">${escapeHtml(nextLabel)}</button>` : ""}
           ${cancelButton}
         </div>
       </article>

@@ -1,22 +1,25 @@
-<article class="kanban-card" data-order-id="{{ order.id }}">
-  <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+<article class="kanban-card order-ticket" data-order-id="{{ order.id }}">
+  <div class="order-ticket-head">
     <div>
       <div class="order-number">#{{ order.order_number }}</div>
       <div class="meta">{{ order.created_at|date:"H:i" }} - {{ order.user.full_name|default:order.user.email }}</div>
     </div>
-    <span class="badge text-bg-light">{{ order.total_price }} د.ل</span>
+    <span class="order-price">{{ order.total_price }} د.ل</span>
   </div>
-  <div class="mb-3">
+  <div class="order-ticket-items">
     {% for item in order.items.all %}
-      <div class="line-item">{{ item.quantity }}x {{ item.product.name }}</div>
+      <div class="line-item">
+        <span>{{ item.product.name }}</span>
+        <span class="line-qty">x{{ item.quantity }}</span>
+      </div>
     {% empty %}
       <div class="line-item text-muted">بدون عناصر مسجلة</div>
     {% endfor %}
   </div>
-  <div class="d-flex gap-2">
+  <div class="order-ticket-footer">
     <button
       type="button"
-      class="btn btn-dark btn-sm rounded-2 px-3 js-order-action"
+      class="btn btn-sm rounded-2 px-3 js-order-action order-primary-action"
       data-order-id="{{ order.id }}"
       {% if order.status == "ACCEPTED" %}
       data-status="PREPARING"
@@ -33,7 +36,7 @@
     {% if order.status != "CANCELLED" and order.status != "COMPLETED" %}
       <button
         type="button"
-        class="btn btn-outline-danger btn-sm rounded-2 px-3 js-order-action"
+        class="btn btn-outline-danger btn-sm rounded-2 px-3 js-order-action order-secondary-action"
         data-order-id="{{ order.id }}"
         data-status="CANCELLED"
       >

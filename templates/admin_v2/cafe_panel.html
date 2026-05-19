@@ -183,6 +183,162 @@
       font-weight: 800;
       letter-spacing: 0;
     }
+    [data-cafe-section-panel][hidden] {
+      display: none !important;
+    }
+    .ops-command.is-active {
+      color: #263789;
+      border-color: rgba(245, 31, 46, .32);
+      background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(74, 166, 220, .14), rgba(255, 241, 0, .14));
+    }
+    .section-command-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .section-command-title {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #08111f;
+      margin: 0;
+    }
+    .section-command-subtitle {
+      color: #667085;
+      margin: 4px 0 0;
+    }
+    .order-ops-toolbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .order-ops-metric {
+      border-radius: 8px;
+      padding: 14px 16px;
+      border: 1px solid rgba(67, 87, 184, .14);
+      background: linear-gradient(135deg, #fff, rgba(74, 166, 220, .08));
+    }
+    .order-ops-metric .label {
+      color: #667085;
+      font-size: .78rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .order-ops-metric .value {
+      color: #08111f;
+      font-size: 1.45rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .kanban-column {
+      min-height: 520px;
+      padding: 0;
+      overflow: hidden;
+      background: #f8fbff;
+    }
+    .kanban-column-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(67, 87, 184, .12);
+      background: #fff;
+    }
+    .kanban-column-title {
+      font-weight: 900;
+      color: #08111f;
+    }
+    .kanban-column-caption {
+      color: #667085;
+      font-size: .78rem;
+      margin-top: 2px;
+    }
+    .order-column-body {
+      padding: 16px;
+      max-height: 68vh;
+      overflow: auto;
+    }
+    .kanban-card.order-ticket {
+      padding: 0;
+      overflow: hidden;
+      border-color: rgba(67, 87, 184, .16);
+      box-shadow: 0 14px 28px rgba(8, 17, 31, .08);
+    }
+    .order-ticket-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(67, 87, 184, .08), rgba(74, 166, 220, .08), rgba(255, 241, 0, .08));
+      border-bottom: 1px solid rgba(67, 87, 184, .12);
+    }
+    .order-ticket .order-number {
+      color: #08111f;
+      font-size: 1.05rem;
+      font-weight: 900;
+    }
+    .order-ticket .meta {
+      color: #667085;
+      font-size: .8rem;
+      margin-top: 3px;
+    }
+    .order-price {
+      white-space: nowrap;
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: #fff;
+      font-weight: 900;
+      background: var(--bh-brand-gradient);
+    }
+    .order-ticket-items {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+    }
+    .order-ticket .line-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(67, 87, 184, .10);
+      color: #344054;
+      font-weight: 700;
+    }
+    .line-qty {
+      min-width: 34px;
+      height: 26px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      color: #263789;
+      background: rgba(74, 166, 220, .14);
+      font-weight: 900;
+    }
+    .order-ticket-footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px 14px;
+      border-top: 1px solid rgba(67, 87, 184, .10);
+      background: #fff;
+    }
+    .order-primary-action {
+      flex: 1 1 auto;
+      border: 0;
+      color: #fff;
+      font-weight: 900;
+      background: var(--bh-brand-gradient);
+    }
+    .order-secondary-action {
+      font-weight: 800;
+    }
     .ws-indicator.connected {
       background: var(--bh-byte-yellow);
       box-shadow: none;
@@ -198,37 +354,42 @@
         grid-template-columns: 1fr;
       }
       .ops-command-strip,
-      .wallet-action-grid {
+      .wallet-action-grid,
+      .order-ops-toolbar {
         grid-template-columns: 1fr;
+      }
+      .section-command-bar {
+        align-items: flex-start;
+        flex-direction: column;
       }
     }
   </style>
 {% endblock %}
 
 {% block content %}
-  <div class="ops-command-strip">
-    <a class="ops-command" href="#orders">
+  <div class="ops-command-strip" data-cafe-section-panel="overview">
+    <a class="ops-command" href="#orders" data-cafe-section-link data-section="orders">
       <div>
         <strong>الطلبات الحية</strong>
         <span>قبول، تجهيز، جاهز، إغلاق</span>
       </div>
       <div class="ops-index">01</div>
     </a>
-    <a class="ops-command" href="#wallets">
+    <a class="ops-command" href="#wallets" data-cafe-section-link data-section="wallets">
       <div>
         <strong>المحافظ والدفع</strong>
         <span>شحن وخصم برصيد مباشر</span>
       </div>
       <div class="ops-index">02</div>
     </a>
-    <a class="ops-command" href="#nfc">
+    <a class="ops-command" href="#nfc" data-cafe-section-link data-section="nfc">
       <div>
         <strong>بطاقات NFC</strong>
         <span>تعريف بطاقة طالب</span>
       </div>
       <div class="ops-index">03</div>
     </a>
-    <a class="ops-command" href="#menu">
+    <a class="ops-command" href="#menu" data-cafe-section-link data-section="menu">
       <div>
         <strong>القائمة والمخزون</strong>
         <span>منتجات وتوفر فوري</span>
@@ -237,7 +398,7 @@
     </a>
   </div>
 
-  <div class="row g-4 mb-4">
+  <div class="row g-4 mb-4" data-cafe-section-panel="overview">
     <div class="col-12 col-md-6 col-xl-3">
       <div class="bh-card bh-kpi is-cyan">
         <div class="label">المقهى</div>
@@ -265,7 +426,7 @@
   </div>
 
   <div class="row g-4 mb-4">
-    <div class="col-12 col-xl-7" id="wallets">
+    <div class="col-12" id="wallets" data-cafe-section-panel="wallets">
       <section class="bh-card p-4 h-100">
         <div class="ops-panel-title">
           <div>
@@ -327,7 +488,7 @@
       </section>
     </div>
 
-    <div class="col-12 col-xl-5" id="nfc">
+    <div class="col-12" id="nfc" data-cafe-section-panel="nfc">
       <section class="bh-card p-4 h-100">
         <div class="ops-panel-title">
           <div>
@@ -353,8 +514,8 @@
   </div>
 
   <div class="row g-4">
-    <div class="col-12 col-xl-8">
-      <div class="bh-card p-4 mb-4" id="menu">
+    <div class="col-12">
+      <div class="bh-card p-4 mb-4" id="menu" data-cafe-section-panel="menu">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <div class="bh-section-title mb-0">إضافة / تعديل منتج</div>
           <span class="bh-pill">Menu</span>
@@ -410,21 +571,42 @@
         </form>
       </div>
 
-      <div class="bh-card p-4" id="orders">
-        <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="bh-card p-4" id="orders" data-cafe-section-panel="orders">
+        <div class="section-command-bar">
           <div>
-            <div class="bh-section-title mb-1">سير الطلبات الحية</div>
-            <div class="text-muted">قبول، تجهيز، جاهز، وإغلاق مع تحديث دوري يعمل على الاستضافة المجانية.</div>
+            <h2 class="section-command-title">مركز تنفيذ الطلبات</h2>
+            <p class="section-command-subtitle">قبول الطلب، بدء التجهيز، إعلان الجاهزية، ثم إغلاق الطلب من مسار واضح.</p>
           </div>
           <div class="d-flex align-items-center gap-2">
             <div id="wsIndicator" class="ws-indicator"></div>
             <span class="small text-muted">WebSocket</span>
           </div>
         </div>
+        <div class="order-ops-toolbar">
+          <div class="order-ops-metric">
+            <div class="label">الطلبات الحية</div>
+            <div class="value">{{ kpis.live_orders }}</div>
+          </div>
+          <div class="order-ops-metric">
+            <div class="label">طلبات جديدة</div>
+            <div class="value">{{ orders_by_status.PENDING|length }}</div>
+          </div>
+          <div class="order-ops-metric">
+            <div class="label">قيد التجهيز</div>
+            <div class="value">{{ orders_by_status.PREPARING|length }}</div>
+          </div>
+          <div class="order-ops-metric">
+            <div class="label">جاهز للتسليم</div>
+            <div class="value">{{ orders_by_status.READY|length }}</div>
+          </div>
+        </div>
         <div class="kanban-grid" id="kanbanBoard">
           <section class="kanban-column" data-status="PENDING">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <strong>جديد</strong>
+            <div class="kanban-column-header">
+              <div>
+                <div class="kanban-column-title">طلبات جديدة</div>
+                <div class="kanban-column-caption">راجع الطلب ثم اقبله للتجهيز.</div>
+              </div>
               <span class="badge text-bg-warning">{{ orders_by_status.PENDING|length }}</span>
             </div>
             <div class="order-column-body">
@@ -442,8 +624,11 @@
             </div>
           </section>
           <section class="kanban-column" data-status="PREPARING">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <strong>قيد التجهيز</strong>
+            <div class="kanban-column-header">
+              <div>
+                <div class="kanban-column-title">قيد التجهيز</div>
+                <div class="kanban-column-caption">طلبات داخل المطبخ أو نقطة التحضير.</div>
+              </div>
               <span class="badge text-bg-primary">{{ orders_by_status.PREPARING|length }}</span>
             </div>
             <div class="order-column-body">
@@ -461,8 +646,11 @@
             </div>
           </section>
           <section class="kanban-column" data-status="READY">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <strong>جاهز</strong>
+            <div class="kanban-column-header">
+              <div>
+                <div class="kanban-column-title">جاهز للتسليم</div>
+                <div class="kanban-column-caption">أغلق الطلب بعد استلام الطالب.</div>
+              </div>
               <span class="badge text-bg-success">{{ orders_by_status.READY|length }}</span>
             </div>
             <div class="order-column-body">
@@ -483,8 +671,8 @@
       </div>
     </div>
 
-    <div class="col-12 col-xl-4">
-      <div class="bh-card p-4 mb-4">
+    <div class="col-12">
+      <div class="bh-card p-4 mb-4" data-cafe-section-panel="overview">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <div class="bh-section-title mb-0">مؤشرات سريعة</div>
           <span class="bh-pill">{{ kpis.today_sales|floatformat:2 }} د.ل اليوم</span>
@@ -492,7 +680,7 @@
         <p class="text-muted mb-0">أي طلب جديد سيظهر فوراً هنا مع تنبيه صوتي، وأي تغيير حالة سيدفع إلى تطبيق الطالب في نفس الدورة.</p>
       </div>
 
-      <div class="bh-card p-4">
+      <div class="bh-card p-4" data-cafe-section-panel="menu">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <div class="bh-section-title mb-0">إدارة المخزون السريعة</div>
           <span class="bh-pill">Out of Stock</span>
